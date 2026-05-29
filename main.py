@@ -18,17 +18,20 @@ logger = get_logger(service="main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Pet Health Agent starting up...")
-    await init_db()
-    logger.info("Database tables created")
+    logger.info("Pet Nutrition Agent starting up...")
+    try:
+        await init_db()
+        logger.info("Database tables ready")
+    except Exception as e:
+        logger.warning(f"Database unavailable, history persistence disabled: {e}")
     yield
-    logger.info("Pet Health Agent shutting down...")
+    logger.info("Pet Nutrition Agent shutting down...")
 
 
 app = FastAPI(
-    title="Pet Health Agent",
-    description="AI 宠物健康问诊 Agent — LangGraph ReAct + GPT-4o",
-    version="0.1.0",
+    title="Pet Nutrition Agent",
+    description="AI 宠物营养评估管家 — LangGraph ReAct + 确定性营养引擎",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
