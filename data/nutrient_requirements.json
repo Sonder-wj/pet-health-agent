@@ -1,0 +1,46 @@
+{
+  "source": "AAFCO Dog/Cat Food Nutrient Profiles (2014); FEDIAF Nutritional Guidelines (2021)",
+  "version": "AAFCO-2014 / FEDIAF-2021 subset",
+  "review_date": "2026-05-29",
+  "notes": "per 1000 kcal ME 基准。Demo 精选关键营养素;成年维持(adult)与生长/繁殖(growth)两套。",
+  "data": {
+    "dog": {
+      "adult": {
+        "protein_g": {"min": 45},
+        "fat_g": {"min": 13.8},
+        "calcium_mg": {"min": 1250, "max": 6250},
+        "phosphorus_mg": {"min": 1000},
+        "sodium_mg": {"min": 200},
+        "ca_p_ratio": {"min": 1.0, "max": 2.0}
+      },
+      "growth": {
+        "protein_g": {"min": 56.3},
+        "fat_g": {"min": 21.3},
+        "calcium_mg": {"min": 3000, "max": 6250},
+        "phosphorus_mg": {"min": 2500},
+        "sodium_mg": {"min": 800},
+        "ca_p_ratio": {"min": 1.0, "max": 1.8}
+      }
+    },
+    "cat": {
+      "adult": {
+        "protein_g": {"min": 65},
+        "fat_g": {"min": 22.5},
+        "calcium_mg": {"min": 1440},
+        "phosphorus_mg": {"min": 1250},
+        "sodium_mg": {"min": 200},
+        "taurine_mg": {"min": 250},
+        "ca_p_ratio": {"min": 1.0, "max": 2.0}
+      },
+      "growth": {
+        "protein_g": {"min": 75},
+        "fat_g": {"min": 22.5},
+        "calcium_mg": {"min": 2400},
+        "phosphorus_mg": {"min": 2000},
+        "sodium_mg": {"min": 400},
+        "taurine_mg": {"min": 250},
+        "ca_p_ratio": {"min": 1.0, "max": 1.5}
+      }
+    }
+  }
+}
