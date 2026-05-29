@@ -1,0 +1,22 @@
+{
+  "source": "FEDIAF Nutritional Guidelines (2021); WSAVA Global Nutrition Guidelines (2013)",
+  "version": "2021",
+  "review_date": "2026-05-29",
+  "notes": "维持能量需求(MER)= RER × 系数。精选常用生理状态,Demo 子集。",
+  "data": {
+    "dog": {
+      "neutered_adult": 1.6,
+      "intact_adult": 1.8,
+      "weight_loss": 1.0,
+      "juvenile": 2.0,
+      "senior": 1.4
+    },
+    "cat": {
+      "neutered_adult": 1.2,
+      "intact_adult": 1.4,
+      "weight_loss": 0.8,
+      "juvenile": 2.5,
+      "senior": 1.1
+    }
+  }
+}
