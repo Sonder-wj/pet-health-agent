@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 import { streamChat, streamResume, apiGet } from '../api/client'
-import { summarizeArgs, summarizeText, toolLabel, triageLevelLabel } from '../utils/agentTrace'
+import { summarizeArgs, summarizeText, toolLabel } from '../utils/agentTrace'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref([])
@@ -11,9 +11,12 @@ export const useChatStore = defineStore('chat', () => {
   const streamingText = ref('')
   const toolCalls = reactive([])
   const agentTrace = reactive([])
-  const triageLevel = ref(null)
-  const pendingQuestion = ref(null)
-  const visitSummary = ref(null)
+
+  // 营养 Agent 状态
+  const petProfile = ref({})       // 后端 state.pet_profile;MVP 仅从对话中累积,前端不直接编辑
+  const assessment = ref(null)     // { energy, nutrients, findings } — 由 'assessment' 事件设置
+  const reportMd = ref('')         // 最终 Markdown 报告 — 由 'report' 事件设置
+
   const error = ref(null)
   const thinking = ref(false)
 
@@ -59,9 +62,9 @@ export const useChatStore = defineStore('chat', () => {
     streamingText.value = ''
     toolCalls.length = 0
     agentTrace.length = 0
-    triageLevel.value = null
-    pendingQuestion.value = null
-    visitSummary.value = null
+    petProfile.value = {}
+    assessment.value = null
+    reportMd.value = ''
     error.value = null
     thinking.value = false
     finalAnswerFallback = ''
@@ -72,17 +75,13 @@ export const useChatStore = defineStore('chat', () => {
   async function sendMessage(query, imageFile) {
     if (isStreaming.value) return
 
-    const shouldResume = pendingQuestion.value !== null && activeThreadId.value
-
     error.value = null
     thinking.value = true
     isStreaming.value = true
     streamingText.value = ''
     toolCalls.length = 0
     agentTrace.length = 0
-    triageLevel.value = null
-    pendingQuestion.value = null
-    visitSummary.value = null
+    // 不清 petProfile/assessment/reportMd — 多轮对话保留累积上下文
     finalAnswerFallback = ''
     tokenStarted = false
 
@@ -90,11 +89,12 @@ export const useChatStore = defineStore('chat', () => {
     messages.push({ sender: 'assistant', content: '', type: 'streaming', _placeholder: true })
 
     const abortController = new AbortController()
+    const hasSession = !!activeThreadId.value
 
     try {
-      const res = shouldResume
+      const res = hasSession
         ? await streamResume({ sessionId: activeThreadId.value, query, signal: abortController.signal })
-        : await streamChat({ query, sessionId: activeThreadId.value, imageFile, signal: abortController.signal })
+        : await streamChat({ query, sessionId: null, imageFile, signal: abortController.signal })
 
       if (!activeThreadId.value) {
         activeThreadId.value = res.headers.get('X-Session-ID') || ''
@@ -128,12 +128,12 @@ export const useChatStore = defineStore('chat', () => {
       }
     } catch (e) {
       if (e.name !== 'AbortError') {
-        error.value = '连接中断，请重试'
+        error.value = '连接中断,请重试'
         appendTraceStep({
           kind: 'thinking',
           status: 'done',
           title: '本次处理被中断',
-          summary: '和后端的流式连接中断了，没能完整拿到这次执行结果。',
+          summary: '和后端的流式连接中断了,没能完整拿到这次执行结果。',
         })
       }
     }
@@ -143,7 +143,7 @@ export const useChatStore = defineStore('chat', () => {
     finalizeRunningTraceSteps()
 
     const finalContent = streamingText.value || finalAnswerFallback
-    const assistantContent = buildAssistantMessageContent(finalContent, pendingQuestion.value, error.value)
+    const assistantContent = (finalContent || '').trim()
     const placeholderIdx = messages.findIndex(message => message._placeholder)
 
     if (placeholderIdx >= 0) {
@@ -168,8 +168,8 @@ export const useChatStore = defineStore('chat', () => {
         appendTraceStep({
           kind: 'thinking',
           status: 'running',
-          title: '正在分析用户问题',
-          summary: summarizeText(event.msg || 'Agent 正在理解症状并规划下一步行动。'),
+          title: '正在思考',
+          summary: summarizeText(event.msg || 'Agent 正在理解需求并规划下一步行动。'),
         })
         break
 
@@ -215,7 +215,6 @@ export const useChatStore = defineStore('chat', () => {
           summary: null,
           traceId: traceEntry.id,
         })
-
         agentTrace.push(traceEntry)
         break
       }
@@ -243,41 +242,27 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
 
-      case 'triage':
-        triageLevel.value = event.level
-        appendTraceStep({
-          kind: 'triage',
-          status: 'done',
-          title: `完成分诊判断：${triageLevelLabel(event.level)}`,
-          summary: '系统已根据当前描述给出这轮的紧急程度判断。',
-        })
-        break
-
-      case 'question':
-        pendingQuestion.value = event.message
-        appendTraceStep({
-          kind: 'thinking',
-          status: 'done',
-          title: '需要补充信息后继续',
-          summary: summarizeText(event.message, 180),
-        })
-
-        if (event.message) {
-          const placeholder = messages.find(message => message._placeholder)
-          if (placeholder && !streamingText.value) {
-            placeholder.content = event.message
-          }
-        }
-        break
-
-      case 'visit_summary':
-        visitSummary.value = event.message
+      case 'assessment':
+        assessment.value = event.data || null
         appendTraceStep({
           kind: 'tool',
           status: 'done',
-          title: '已生成就诊摘要',
-          summary: '这份摘要可以直接给用户查看，也方便线下就诊时出示。',
-          resultPreview: summarizeText(event.message, 180),
+          title: '已生成营养评估',
+          summary: '能量平衡、营养素密度、关键发现已经准备好。',
+          resultPreview: assessment.value
+            ? `${assessment.value.findings?.length || 0} 项 findings`
+            : '',
+        })
+        break
+
+      case 'report':
+        reportMd.value = event.markdown || ''
+        appendTraceStep({
+          kind: 'tool',
+          status: 'done',
+          title: '已渲染最终报告',
+          summary: 'Markdown 报告已发送到右侧展示区。',
+          resultPreview: summarizeText(reportMd.value, 180),
         })
         break
 
@@ -316,7 +301,7 @@ export const useChatStore = defineStore('chat', () => {
     if (runningThinking) {
       runningThinking.status = 'done'
       if (!runningThinking.summary) {
-        runningThinking.summary = '分析完成，开始执行下一步。'
+        runningThinking.summary = '思考结束,开始执行下一步。'
       }
     }
   }
@@ -343,19 +328,6 @@ export const useChatStore = defineStore('chat', () => {
     return `${prefix}-${Date.now()}-${traceId}`
   }
 
-  function buildAssistantMessageContent(finalContent, pendingQuestionText, currentError) {
-    if (currentError) return ''
-
-    const reply = (finalContent || '').trim()
-    const followUp = (pendingQuestionText || '').trim()
-
-    if (reply && followUp) {
-      return `${reply}\n\n补充确认：\n${followUp}`
-    }
-
-    return reply || followUp
-  }
-
   return {
     conversations,
     activeThreadId,
@@ -364,9 +336,9 @@ export const useChatStore = defineStore('chat', () => {
     streamingText,
     toolCalls,
     agentTrace,
-    triageLevel,
-    pendingQuestion,
-    visitSummary,
+    petProfile,
+    assessment,
+    reportMd,
     error,
     thinking,
     currentTitle,
