@@ -1,6 +1,5 @@
 from app.models.conversation import Conversation
 from app.models.message import Message
-from app.models.symptom_log import SymptomLog
 from app.models.user import User
 
-__all__ = ["User", "Conversation", "Message", "SymptomLog"]
+__all__ = ["User", "Conversation", "Message"]

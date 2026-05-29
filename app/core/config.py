@@ -8,14 +8,10 @@ ENV_FILE = ROOT_DIR / ".env"
 
 
 class Settings(BaseSettings):
-    # OpenAI-compatible (GPT-5.4 via relay)
+    # OpenAI-compatible (GPT-4o via relay)
     OPENAI_API_KEY: str
     OPENAI_BASE_URL: str
-    OPENAI_MODEL: str = "gpt-5.4"
-
-    # Ollama (embedding)
-    OLLAMA_BASE_URL: str
-    OLLAMA_EMBEDDING_MODEL: str = "bge-m3"
+    OPENAI_MODEL: str = "gpt-4o"
 
     # MySQL
     DB_HOST: str
@@ -24,18 +20,10 @@ class Settings(BaseSettings):
     DB_PASSWORD: str
     DB_NAME: str
 
-    # Milvus
-    MILVUS_HOST: str = "localhost"
-    MILVUS_PORT: int = 19530
-    MILVUS_COLLECTION: str = "pet_knowledge"
-
     # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
-    # Embedding
-    EMBEDDING_THRESHOLD: float = 0.80
 
     # LangGraph checkpoint
     CHECKPOINT_DB_PATH: str = "checkpoints.db"
