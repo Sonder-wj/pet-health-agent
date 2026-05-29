@@ -1,0 +1,17 @@
+{
+  "source": "Veterinary dermatology literature — common canine/feline food allergens (Mueller et al., 2016)",
+  "version": "literature-subset",
+  "review_date": "2026-05-29",
+  "notes": "过敏原 → 别名/关键词(含中英文及食材库名片段),用子串匹配。",
+  "data": {
+    "chicken": ["chicken", "poultry", "鸡"],
+    "beef": ["beef", "牛"],
+    "dairy": ["milk", "cheese", "yogurt", "dairy", "乳", "奶"],
+    "egg": ["egg", "蛋"],
+    "wheat": ["wheat", "gluten", "小麦", "麸"],
+    "soy": ["soy", "soya", "大豆", "豆"],
+    "lamb": ["lamb", "mutton", "羊"],
+    "fish": ["fish", "salmon", "tuna", "鱼", "三文鱼"],
+    "corn": ["corn", "maize", "玉米"]
+  }
+}
