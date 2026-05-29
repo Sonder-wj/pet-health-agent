@@ -1,0 +1,23 @@
+{
+  "source": "IRIS Staging of CKD (2023); WSAVA Global Nutrition Guidelines",
+  "version": "IRIS-2023 / WSAVA subset",
+  "review_date": "2026-05-29",
+  "notes": "按疾病覆盖/收紧需求目标。Demo 精选;限磷为 CKD 管理核心。",
+  "data": {
+    "kidney": {
+      "phosphorus_mg": {"min": 500, "max": 1200},
+      "sodium_mg": {"max": 1000}
+    },
+    "obesity": {
+      "fat_g": {"max": 30},
+      "fiber_g": {"min": 15}
+    },
+    "diabetes_cat": {
+      "carb_g": {"max": 30},
+      "protein_g": {"min": 80}
+    },
+    "diabetes_dog": {
+      "fiber_g": {"min": 20}
+    }
+  }
+}
