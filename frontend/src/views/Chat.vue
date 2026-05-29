@@ -17,15 +17,11 @@
           </button>
           <h2 class="chat-title">{{ chatStore.currentTitle }}</h2>
         </div>
-
-        <div class="topbar-right">
-          <span v-if="chatStore.triageLevel" class="triage-pill" :class="triageLevelClass">
-            {{ triageLevelLabel }}
-          </span>
-        </div>
       </header>
 
       <div class="chat-messages" ref="messagesEl">
+        <PetProfileCard :profile="chatStore.petProfile" />
+
         <WelcomeScreen
           v-if="!chatStore.activeThreadId && chatStore.messages.length === 0 && !chatStore.isStreaming"
           @send-prompt="text => handleSend({ text, imageFile: null })"
@@ -43,9 +39,14 @@
           />
         </template>
 
-        <VisitSummary
-          v-if="chatStore.visitSummary"
-          :content="chatStore.visitSummary"
+        <AssessmentCard
+          v-if="chatStore.assessment"
+          :assessment="chatStore.assessment"
+        />
+
+        <MarkdownReport
+          v-if="chatStore.reportMd"
+          :markdown="chatStore.reportMd"
         />
 
         <div v-if="chatStore.error" class="error-banner">
@@ -56,8 +57,8 @@
       </div>
 
       <ChatInput
+        ref="chatInputEl"
         :disabled="chatStore.isStreaming"
-        :pending-question="chatStore.pendingQuestion"
         @send="handleSend"
       />
     </main>
@@ -78,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import AppSidebar from '../components/AppSidebar.vue'
@@ -87,25 +88,16 @@ import MessageBubble from '../components/MessageBubble.vue'
 import ChatInput from '../components/ChatInput.vue'
 import WelcomeScreen from '../components/WelcomeScreen.vue'
 import ThinkingDots from '../components/ThinkingDots.vue'
-import VisitSummary from '../components/VisitSummary.vue'
-import { triageLevelLabel as formatTriageLevel } from '../utils/agentTrace'
+import PetProfileCard from '../components/PetProfileCard.vue'
+import AssessmentCard from '../components/AssessmentCard.vue'
+import MarkdownReport from '../components/MarkdownReport.vue'
 
 const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
 const messagesEl = ref(null)
+const chatInputEl = ref(null)
 const showSidebar = ref(false)
-
-const triageLevelClass = computed(() => {
-  const classes = {
-    er_now: 'level-er',
-    schedule_visit: 'level-amber',
-    home_care: 'level-green',
-  }
-  return classes[chatStore.triageLevel] || ''
-})
-
-const triageLevelLabel = computed(() => formatTriageLevel(chatStore.triageLevel))
 
 function scrollToBottom() {
   nextTick(() => {
@@ -123,8 +115,8 @@ function shouldRenderTraceAfter(index, msg) {
 watch(() => chatStore.streamingText, scrollToBottom)
 watch(() => chatStore.messages.length, scrollToBottom)
 watch(() => chatStore.agentTrace.length, scrollToBottom)
-watch(() => chatStore.visitSummary, scrollToBottom)
-watch(() => chatStore.pendingQuestion, scrollToBottom)
+watch(() => chatStore.assessment, scrollToBottom)
+watch(() => chatStore.reportMd, scrollToBottom)
 
 async function handleSend({ text, imageFile }) {
   await chatStore.sendMessage(text, imageFile)
@@ -216,41 +208,6 @@ watch(() => route.params.threadId, async id => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.triage-pill {
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.level-green {
-  background: var(--green-100);
-  color: var(--green-700);
-}
-
-.level-amber {
-  background: var(--amber-100);
-  color: var(--amber-700);
-}
-
-.level-er {
-  background: var(--red-100);
-  color: var(--red-700);
-  animation: pulse-er 2s ease-in-out infinite;
-}
-
-@keyframes pulse-er {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--red-300);
-  }
-
-  50% {
-    box-shadow: 0 0 0 6px transparent;
-  }
 }
 
 .chat-messages {

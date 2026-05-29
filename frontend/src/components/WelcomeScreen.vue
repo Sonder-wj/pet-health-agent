@@ -2,29 +2,34 @@
   <div class="welcome">
     <div class="welcome-illustration">
       <svg viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Dog silhouette -->
-        <ellipse cx="75" cy="100" rx="45" ry="35" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
-        <circle cx="55" cy="70" r="22" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
-        <ellipse cx="38" cy="48" rx="12" ry="16" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
-        <ellipse cx="72" cy="48" rx="12" ry="16" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
-        <circle cx="49" cy="66" r="2.5" fill="var(--amber-700)"/>
-        <circle cx="61" cy="66" r="2.5" fill="var(--amber-700)"/>
-        <ellipse cx="55" cy="74" rx="3" ry="2" fill="var(--amber-500)"/>
-        <!-- Cat silhouette -->
-        <ellipse cx="140" cy="100" rx="35" ry="30" fill="var(--blue-100)" stroke="var(--blue-300)" stroke-width="2"/>
-        <circle cx="140" cy="65" r="18" fill="var(--blue-100)" stroke="var(--blue-300)" stroke-width="2"/>
-        <path d="M128 50l-8-16M152 50l8-16" stroke="var(--blue-300)" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="134" cy="62" r="2" fill="var(--blue-700)"/>
-        <circle cx="146" cy="62" r="2" fill="var(--blue-700)"/>
-        <ellipse cx="140" cy="68" rx="2.5" ry="1.5" fill="var(--blue-500)"/>
-        <!-- Heart between them -->
-        <path d="M108 60c-3-4-8-4-10 0s0 8 10 14c10-6 12-10 10-14s-7-4-10 0z" fill="var(--red-300)" opacity="0.6"/>
-        <!-- Ground line -->
-        <path d="M20 130h160" stroke="var(--border)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4 6"/>
+        <!-- 食盆 -->
+        <ellipse cx="100" cy="125" rx="60" ry="12" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
+        <path d="M40 125 Q40 95 100 95 Q160 95 160 125" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
+        <!-- 食物 -->
+        <circle cx="80" cy="100" r="6" fill="var(--green-300)"/>
+        <circle cx="100" cy="98" r="5" fill="var(--red-300)"/>
+        <circle cx="118" cy="100" r="6" fill="var(--amber-500)"/>
+        <circle cx="90" cy="106" r="4" fill="var(--blue-300)"/>
+        <circle cx="110" cy="106" r="4" fill="var(--green-500)"/>
+        <!-- 狗 -->
+        <circle cx="55" cy="60" r="20" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
+        <ellipse cx="42" cy="42" rx="10" ry="14" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
+        <ellipse cx="68" cy="42" rx="10" ry="14" fill="var(--amber-100)" stroke="var(--amber-300)" stroke-width="2"/>
+        <circle cx="49" cy="58" r="2" fill="var(--amber-700)"/>
+        <circle cx="61" cy="58" r="2" fill="var(--amber-700)"/>
+        <ellipse cx="55" cy="65" rx="2.5" ry="1.6" fill="var(--amber-500)"/>
+        <!-- 猫 -->
+        <circle cx="150" cy="60" r="18" fill="var(--blue-100)" stroke="var(--blue-300)" stroke-width="2"/>
+        <path d="M138 47l-7-14M162 47l7-14" stroke="var(--blue-300)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="144" cy="58" r="1.8" fill="var(--blue-700)"/>
+        <circle cx="156" cy="58" r="1.8" fill="var(--blue-700)"/>
+        <ellipse cx="150" cy="64" rx="2" ry="1.3" fill="var(--blue-500)"/>
+        <!-- 营养符号 ❤ -->
+        <path d="M100 30c-3-4-8-4-10 0s0 8 10 14c10-6 12-10 10-14s-7-4-10 0z" fill="var(--red-300)" opacity="0.6"/>
       </svg>
     </div>
-    <h2 class="welcome-title">你好，我是小宠</h2>
-    <p class="welcome-desc">描述宠物的症状或上传照片，我来帮你评估并提供专业建议</p>
+    <h2 class="welcome-title">你好,我是小宠营养师</h2>
+    <p class="welcome-desc">告诉我你家宝贝的档案与饮食,我用 USDA + AAFCO 数据给出结构化营养评估</p>
     <div class="quick-prompts">
       <button
         v-for="p in prompts"
@@ -42,10 +47,22 @@
 defineEmits(['sendPrompt'])
 
 const prompts = [
-  { label: '🐶 狗狗呕吐怎么办', text: '我家狗狗今天吐了两次，精神还好，需要去医院吗？' },
-  { label: '🐱 猫咪不太精神', text: '猫咪这两天不太吃东西，总是趴着，是怎么回事？' },
-  { label: '💊 宠物用药咨询', text: '宠物药怎么判断剂量？需要注意什么？' },
-  { label: '🔍 症状是什么病', text: '我家宠物皮肤上有红斑，还掉毛，可能是什么问题？' },
+  {
+    label: '🐶 10kg 拉布拉多自制饮食',
+    text: '我家 10kg 拉布拉多,3 岁,已绝育,无疾病。每天喂 300g 鸡胸肉 + 100g 白米饭 + 50g 南瓜,营养够吗?',
+  },
+  {
+    label: '🐱 肾病猫商品粮评估',
+    text: '我家 4kg 老猫,8 岁,绝育,确诊慢性肾病。每天吃 60g 某商品粮(粗蛋白 32%、粗脂肪 14%、粗纤维 3%、水分 10%、kcal/kg 4000),适合吗?',
+  },
+  {
+    label: '📷 包装照解析',
+    text: '我刚上传了商品粮包装照,帮我看看营养成分。',
+  },
+  {
+    label: '⚠️ 钙磷比检查',
+    text: '听说自制肉饭钙不够,怎么补?给狗喂全鸡胸肉会怎样?',
+  },
 ]
 </script>
 
@@ -86,7 +103,7 @@ const prompts = [
 .welcome-desc {
   font-size: 14px;
   color: var(--text-secondary);
-  max-width: 360px;
+  max-width: 380px;
   text-align: center;
   line-height: 1.6;
 }
@@ -96,7 +113,7 @@ const prompts = [
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 28px;
-  max-width: 480px;
+  max-width: 540px;
   justify-content: center;
 }
 .prompt-chip {

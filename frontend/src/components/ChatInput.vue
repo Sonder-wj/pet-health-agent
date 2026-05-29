@@ -1,5 +1,10 @@
 <template>
   <div class="input-area">
+    <DietInputHelpers
+      @upload-image="triggerFileInput"
+      @insert-text="handleInsertText"
+    />
+
     <!-- Image preview -->
     <div v-if="imagePreview" class="image-preview-row">
       <div class="preview-thumb">
@@ -11,9 +16,9 @@
     </div>
 
     <form class="input-row" @submit.prevent="handleSend">
-      <label class="btn-upload" :class="{ disabled }" aria-label="上传图片">
+      <label class="btn-upload" :class="{ disabled }" aria-label="上传商品粮包装照">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="9" r="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 14l5-4 3 2 3-3 5 5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-        <input type="file" accept="image/*" @change="onFileChange" :disabled="disabled" hidden />
+        <input ref="fileInputEl" type="file" accept="image/*" @change="onFileChange" :disabled="disabled" hidden />
       </label>
 
       <textarea
@@ -34,11 +39,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
+import DietInputHelpers from './DietInputHelpers.vue'
 
 const props = defineProps({
   disabled: Boolean,
-  pendingQuestion: String,
 })
 
 const emit = defineEmits(['send'])
@@ -47,11 +52,11 @@ const text = ref('')
 const imageFile = ref(null)
 const imagePreview = ref(null)
 const textareaEl = ref(null)
+const fileInputEl = ref(null)
 
 const placeholder = computed(() => {
-  if (props.disabled) return '小宠正在回复中...'
-  if (props.pendingQuestion) return '请回答小宠的问题...'
-  return '描述宠物的症状，小宠来帮你分析...'
+  if (props.disabled) return '小宠营养师正在评估中...'
+  return '描述宠物档案与饮食,营养师会给出结构化评估...'
 })
 
 const canSend = computed(() => text.value.trim() || imageFile.value)
@@ -82,6 +87,22 @@ function onFileChange(e) {
 function removeImage() {
   imageFile.value = null
   imagePreview.value = null
+  if (fileInputEl.value) fileInputEl.value.value = ''
+}
+
+function triggerFileInput() {
+  if (!props.disabled && fileInputEl.value) {
+    fileInputEl.value.click()
+  }
+}
+
+function handleInsertText(template) {
+  if (props.disabled) return
+  text.value = text.value ? `${text.value}\n${template}` : template
+  nextTick(() => {
+    autoResize()
+    textareaEl.value?.focus()
+  })
 }
 
 function handleSend() {
@@ -90,6 +111,7 @@ function handleSend() {
   text.value = ''
   imageFile.value = null
   imagePreview.value = null
+  if (fileInputEl.value) fileInputEl.value.value = ''
   nextTick(() => {
     if (textareaEl.value) {
       textareaEl.value.style.height = 'auto'
@@ -97,20 +119,19 @@ function handleSend() {
   })
 }
 
-// Focus on mount
 defineExpose({ focus: () => textareaEl.value?.focus() })
 </script>
 
 <style scoped>
 .input-area {
-  padding: 16px 24px 20px;
+  padding: 0 24px 20px;
   background: var(--bg-card);
   border-top: 1px solid var(--border-light);
   flex-shrink: 0;
 }
 
 .image-preview-row {
-  margin-bottom: 10px;
+  margin: 8px 0 10px;
 }
 .preview-thumb {
   position: relative;
