@@ -5,11 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, select
 
-from app.agent.graph import agent_graph
 from app.core.database import AsyncSessionLocal
 from app.core.deps import get_current_user
 from app.core.logger import get_logger
@@ -99,10 +98,10 @@ def _summarize_tool_output(tool_name: str, output) -> str:
     return str(output)[:300]
 
 
-async def _stream_agent_response(initial_state: dict, thread_config: dict):
+async def _stream_agent_response(agent_graph, initial_state: dict, thread_config: dict):
     """核心流:转发 LLM token、tool_call/tool_result;末尾发 assessment/report。"""
     try:
-        async for event in agent_graph.astream_events(  # type: ignore[attr-defined]
+        async for event in agent_graph.astream_events(
             initial_state, thread_config, version="v2"
         ):
             kind = event.get("event", "")
@@ -133,7 +132,8 @@ async def _stream_agent_response(initial_state: dict, thread_config: dict):
                 yield f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'summary': summary}, ensure_ascii=False)}\n\n"
 
         # 流结束后:从最终 state 发结构化终态事件
-        final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
+        # AsyncSqliteSaver 走异步接口,SqliteSaver 走同步;这里只有异步用例。
+        final_state = await agent_graph.aget_state(thread_config)
         sv = final_state.values if final_state else {}
 
         if sv.get("assessment"):
@@ -165,11 +165,13 @@ def _extract_assistant_content(state_values: dict) -> str:
 
 @router.post("/chat")
 async def chat(
+    request: Request,
     query: str = Form(...),
     session_id: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
     current_user: User | None = Depends(get_current_user),
 ):
+    agent_graph = request.app.state.agent_graph
     label_image_path: str | None = None
     if image and image.filename:
         img_dir = Path("uploads/images")
@@ -195,10 +197,10 @@ async def chat(
     async def event_stream():
         yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠营养师正在评估...'})}\n\n"
 
-        async for chunk in _stream_agent_response(initial_state, thread_config):
+        async for chunk in _stream_agent_response(agent_graph, initial_state, thread_config):
             yield chunk
 
-        final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
+        final_state = await agent_graph.aget_state(thread_config)
         sv = final_state.values if final_state else {}
         assistant_content = _extract_assistant_content(sv)
 
@@ -218,11 +220,13 @@ async def chat(
 
 @router.post("/chat/{session_id}/resume")
 async def chat_resume(
+    request: Request,
     session_id: str,
     query: str = Form(...),
     current_user: User | None = Depends(get_current_user),
 ):
     """续接对话 — 不再有医疗向 'already_triaged' 短路,标准 ReAct 继续。"""
+    agent_graph = request.app.state.agent_graph
     thread_config = {"configurable": {"thread_id": session_id}}
 
     async def event_stream():
@@ -232,10 +236,10 @@ async def chat_resume(
             "messages": [{"role": "user", "content": query}],
         }
 
-        async for chunk in _stream_agent_response(resume_state, thread_config):
+        async for chunk in _stream_agent_response(agent_graph, resume_state, thread_config):
             yield chunk
 
-        final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
+        final_state = await agent_graph.aget_state(thread_config)
         sv = final_state.values if final_state else {}
         assistant_content = _extract_assistant_content(sv)
 

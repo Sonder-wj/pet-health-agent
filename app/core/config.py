@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # LangGraph checkpoint
-    CHECKPOINT_DB_PATH: str = "checkpoints.db"
+    # LangGraph checkpoint (AsyncSqliteSaver,异步生命周期由 main.py lifespan 管)
+    CHECKPOINT_DB_PATH: str = "nutrition_checkpoints.db"
 
     @property
     def DATABASE_URL(self) -> str:

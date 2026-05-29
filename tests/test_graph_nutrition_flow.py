@@ -4,22 +4,35 @@
 - graph 编译成功 + 节点拓扑正确
 - 循环检测、终止条件、工具→agent 路由的纯函数行为
 """
+import pytest
+from langgraph.checkpoint.memory import MemorySaver
+
 from app.agent.graph import (
     MAX_ITERATIONS,
     _detect_loop,
     after_tools,
-    agent_graph,
+    build_graph,
     should_continue,
 )
 from app.agent.tools.registry import ALL_TOOLS, TOOL_BY_NAME
 
+
+@pytest.fixture(scope="module")
+def agent_graph():
+    """编译一个测试用 graph(MemorySaver,完全同步,无 IO)。
+
+    与 production main.py 的 AsyncSqliteSaver 路径解耦 — 测试不依赖
+    aiosqlite/异步上下文,但走相同的 build_graph() 拓扑组装代码。
+    """
+    return build_graph(MemorySaver())
+
 # ---------- 1. 拓扑结构 ----------
 
 class TestGraphTopology:
-    def test_graph_compiled(self):
+    def test_graph_compiled(self, agent_graph):
         assert agent_graph is not None
 
-    def test_nodes_simplified(self):
+    def test_nodes_simplified(self, agent_graph):
         # LangGraph compiled graph exposes nodes dict
         node_names = set(agent_graph.nodes.keys())
         assert "agent" in node_names

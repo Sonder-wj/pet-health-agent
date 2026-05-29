@@ -3,13 +3,15 @@
 结构: agent_node ⇄ tool_node
 - 入口直接进 agent_node(无独立分诊节点)
 - 终止条件: final_response 被设置 / 达到 MAX_ITERATIONS / 检测到工具循环
+
+Checkpointer 由调用方注入(production 走 AsyncSqliteSaver,测试走 MemorySaver),
+本模块不持有任何 DB connection — 全部生命周期管理交给 FastAPI lifespan。
 """
 import json
-import sqlite3
 
 from langchain_core.messages import ToolMessage
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, StateGraph
 
 from app.agent.prompts.system import SYSTEM_PROMPT
@@ -177,17 +179,16 @@ def after_tools(state: AgentState) -> str:
     return "agent"
 
 
-def build_graph() -> StateGraph:
+def build_graph(checkpointer: BaseCheckpointSaver):
+    """编译并返回 ReAct graph;checkpointer 由调用方注入。
+
+    生产用 AsyncSqliteSaver(由 main.py lifespan 在异步上下文里管理),
+    测试用 MemorySaver。本函数本身保持同步 — 仅做图结构编译。
+    """
     graph = StateGraph(AgentState)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tool_node)
     graph.set_entry_point("agent")
     graph.add_conditional_edges("agent", should_continue, {"tools": "tools", "end": END})
     graph.add_conditional_edges("tools", after_tools, {"agent": "agent", "end": END})
-
-    conn = sqlite3.connect(settings.CHECKPOINT_DB_PATH, check_same_thread=False)
-    checkpointer = SqliteSaver(conn)
-    return graph.compile(checkpointer=checkpointer)  # type: ignore[return-value]
-
-
-agent_graph = build_graph()
+    return graph.compile(checkpointer=checkpointer)
