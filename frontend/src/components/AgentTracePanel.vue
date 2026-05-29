@@ -3,7 +3,7 @@
     <div class="trace-header">
       <div>
         <p class="trace-kicker">Agent 处理过程</p>
-        <h3 class="trace-title">像工具代理一样展示这次推理链路</h3>
+        <h3 class="trace-title">营养师的推理链路与工具调用</h3>
       </div>
       <span class="trace-badge">{{ runningCount > 0 ? `进行中 ${runningCount}` : '已完成' }}</span>
     </div>
@@ -60,7 +60,6 @@ const runningCount = computed(() => props.steps.filter(step => step.status === '
 function kindLabel(kind) {
   const labels = {
     thinking: '思考',
-    triage: '分诊',
     tool: '工具调用',
   }
   return labels[kind] || '步骤'

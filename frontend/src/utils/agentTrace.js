@@ -1,36 +1,30 @@
-export const TOOL_LABELS = {
-  emergency_triage: '紧急分诊评估',
-  collect_symptoms: '采集症状信息',
-  analyze_pet_image: '分析宠物图片',
-  search_pet_knowledge: '检索知识库',
-  medication_guide: '用药建议',
-  generate_visit_summary: '生成就诊摘要',
-  final_answer: '整理最终答复',
-  track_symptoms: '查询症状历史',
-}
+// Agent 工具轨迹辅助工具 — 营养评估方向
 
-const TRIAGE_LEVEL_LABELS = {
-  er_now: '需要立即就医',
-  schedule_visit: '建议尽快预约就诊',
-  home_care: '可先居家观察',
+export const TOOL_LABELS = {
+  extract_label_nutrition: '解析包装标签',
+  lookup_ingredient: '查询食材',
+  compute_energy_requirement: '计算能量需求',
+  assess_nutrition: '综合营养评估',
+  final_answer: '生成最终报告',
 }
 
 const ARG_LABELS = {
   species: '物种',
-  symptoms: '症状',
-  query: '问题',
-  additional_info: '补充信息',
-  current_symptoms: '当前症状',
-  pet_profile: '宠物资料',
+  weight_kg: '体重(kg)',
+  age_months: '月龄',
+  neutered: '已绝育',
+  conditions: '健康状况',
+  allergens: '过敏原',
+  query: '查询',
+  max_results: '最多返回',
   image_path: '图片路径',
+  profile: '宠物档案',
+  diet_input: '饮食描述',
+  message: '消息',
 }
 
 export function toolLabel(name) {
   return TOOL_LABELS[name] || name || '未知工具'
-}
-
-export function triageLevelLabel(level) {
-  return TRIAGE_LEVEL_LABELS[level] || level || '未判定'
 }
 
 export function summarizeArgs(args) {
@@ -65,10 +59,7 @@ export function summarizeText(value, maxLength = 140) {
 
 function compactValue(value) {
   if (typeof value === 'string') return summarizeText(value, 50)
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
-  }
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
 
   if (Array.isArray(value)) {
     const compact = value.slice(0, 3).map(compactValue).join(', ')

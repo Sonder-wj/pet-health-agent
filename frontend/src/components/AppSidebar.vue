@@ -10,7 +10,10 @@
           <path d="M20 29c-3 0-5-1.5-6.5-3" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
       </div>
-      <span class="sidebar-brand">小宠</span>
+      <div class="sidebar-brand-wrap">
+        <span class="sidebar-brand">小宠营养师</span>
+        <span class="sidebar-tagline">AI 宠物营养评估</span>
+      </div>
     </div>
 
     <button class="btn-new-chat" @click="$emit('newChat')">
@@ -98,11 +101,21 @@ function formatDate(iso) {
   width: 36px; height: 36px;
   display: block;
 }
+.sidebar-brand-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
 .sidebar-brand {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 500;
   color: #e0dbcc;
+}
+.sidebar-tagline {
+  font-size: 10px;
+  color: var(--text-sidebar-muted);
+  letter-spacing: 0.04em;
 }
 
 .btn-new-chat {
