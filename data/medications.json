@@ -1,0 +1,345 @@
+{
+  "medications": {
+    "恩诺沙星": {
+      "usage": "广谱抗生素，氟喹诺酮类",
+      "dog_dosage_min": 5,
+      "dog_dosage_max": 20,
+      "unit": "mg/kg",
+      "cat_dosage_min": 5,
+      "cat_dosage_max": 5,
+      "cat_unit": "mg/kg",
+      "frequency": "每日1-2次",
+      "duration": "5-10天",
+      "warnings": [
+        "幼年动物慎用（影响软骨发育）",
+        "不与奶制品同服"
+      ]
+    },
+    "阿莫西林克拉维酸钾": {
+      "usage": "广谱抗生素，青霉素类",
+      "dog_dosage_min": 12.5,
+      "dog_dosage_max": 25,
+      "unit": "mg/kg",
+      "cat_dosage_min": 12.5,
+      "cat_dosage_max": 12.5,
+      "cat_unit": "mg/kg",
+      "frequency": "每12小时一次",
+      "duration": "7-14天",
+      "warnings": [
+        "青霉素过敏史禁用",
+        "首次服用观察过敏反应"
+      ]
+    },
+    "多西环素": {
+      "usage": "广谱抗生素，四环素类",
+      "dog_dosage_min": 5,
+      "dog_dosage_max": 10,
+      "unit": "mg/kg",
+      "cat_dosage_min": 5,
+      "cat_dosage_max": 5,
+      "cat_unit": "mg/kg",
+      "frequency": "每12小时一次",
+      "duration": "7-14天",
+      "warnings": [
+        "服药后需喂水防食管灼伤",
+        "幼年动物慎用"
+      ]
+    },
+    "头孢氨苄": {
+      "usage": "第一代头孢菌素，皮肤/尿路感染",
+      "dog_dosage_min": 15,
+      "dog_dosage_max": 30,
+      "unit": "mg/kg",
+      "cat_dosage_min": 15,
+      "cat_dosage_max": 30,
+      "cat_unit": "mg/kg",
+      "frequency": "每8-12小时一次",
+      "duration": "7-14天",
+      "warnings": [
+        "青霉素过敏犬猫慎用",
+        "肾功能不全者需调整剂量"
+      ]
+    },
+    "甲硝唑": {
+      "usage": "抗原虫/厌氧菌，腹泻常用",
+      "dog_dosage_min": 10,
+      "dog_dosage_max": 25,
+      "unit": "mg/kg",
+      "cat_dosage_min": 10,
+      "cat_dosage_max": 15,
+      "cat_unit": "mg/kg",
+      "frequency": "每12小时一次",
+      "duration": "5-7天",
+      "warnings": [
+        "长期使用可能产生神经毒性",
+        "肝病犬猫需减量"
+      ]
+    },
+    "阿奇霉素": {
+      "usage": "大环内酯类抗生素",
+      "dog_dosage_min": 5,
+      "dog_dosage_max": 10,
+      "unit": "mg/kg",
+      "cat_dosage_min": 5,
+      "cat_dosage_max": 10,
+      "cat_unit": "mg/kg",
+      "frequency": "每日一次",
+      "duration": "3-5天",
+      "warnings": [
+        "肝病犬猫慎用",
+        "与抗酸药间隔至少2小时"
+      ]
+    },
+    "芬苯达唑": {
+      "usage": "广谱驱虫药",
+      "dog_dosage_min": 50,
+      "dog_dosage_max": 50,
+      "unit": "mg/kg",
+      "cat_dosage_min": 50,
+      "cat_dosage_max": 50,
+      "cat_unit": "mg/kg",
+      "frequency": "每日一次",
+      "duration": "3天",
+      "warnings": [
+        "孕期安全性未完全确定"
+      ]
+    },
+    "吡喹酮": {
+      "usage": "绦虫专用驱虫药",
+      "dog_dosage_min": 5,
+      "dog_dosage_max": 7.5,
+      "unit": "mg/kg",
+      "cat_dosage_min": 5,
+      "cat_dosage_max": 5,
+      "cat_unit": "mg/kg",
+      "frequency": "单次服用（可1周后重复）",
+      "duration": "单次",
+      "warnings": [
+        "通常与其他驱虫药联用",
+        "哺乳期可用"
+      ]
+    },
+    "米尔贝肟": {
+      "usage": "驱虫/心丝虫预防",
+      "dog_dosage_min": 0.5,
+      "dog_dosage_max": 1,
+      "unit": "mg/kg",
+      "cat_dosage_min": 2,
+      "cat_dosage_max": 2,
+      "cat_unit": "mg/kg",
+      "frequency": "每月一次",
+      "duration": "长期",
+      "warnings": [
+        "柯利犬相对安全但仍需遵医嘱",
+        "心丝虫阳性犬禁用"
+      ]
+    },
+    "塞拉菌素": {
+      "usage": "外用驱虫（跳蚤、耳螨、心丝虫）",
+      "dog_dosage_min": 6,
+      "dog_dosage_max": 12,
+      "unit": "mg/kg",
+      "cat_dosage_min": 6,
+      "cat_dosage_max": 12,
+      "cat_unit": "mg/kg",
+      "frequency": "每月一次",
+      "duration": "长期",
+      "warnings": [
+        "仅限外用",
+        "滴药后禁洗澡24小时"
+      ]
+    },
+    "非泼罗尼": {
+      "usage": "体外驱虫（跳蚤、蜱虫）",
+      "dog_dosage_min": 6.7,
+      "dog_dosage_max": 10,
+      "unit": "mg/kg",
+      "cat_dosage_min": 7.5,
+      "cat_dosage_max": 15,
+      "cat_unit": "mg/kg",
+      "frequency": "每月一次",
+      "duration": "长期",
+      "warnings": [
+        "仅限外用",
+        "猫禁用犬用高浓度制剂"
+      ]
+    },
+    "泼尼松龙": {
+      "usage": "抗炎/免疫抑制",
+      "dog_dosage_min": 0.5,
+      "dog_dosage_max": 2,
+      "unit": "mg/kg",
+      "cat_dosage_min": 1,
+      "cat_dosage_max": 2,
+      "cat_unit": "mg/kg",
+      "frequency": "每日1-2次",
+      "duration": "按医嘱渐减",
+      "warnings": [
+        "不可突然停药",
+        "长期使用需监测肝肾",
+        "抑制免疫"
+      ]
+    },
+    "马罗匹坦": {
+      "usage": "止吐药",
+      "dog_dosage_min": 2,
+      "dog_dosage_max": 2,
+      "unit": "mg/kg",
+      "cat_dosage_min": 1,
+      "cat_dosage_max": 1,
+      "cat_unit": "mg/kg",
+      "frequency": "每日一次",
+      "duration": "最多5天",
+      "warnings": [
+        "12周以下幼犬安全性未评估",
+        "与某些驱虫药间隔服用"
+      ]
+    },
+    "奥美拉唑": {
+      "usage": "质子泵抑制剂，胃酸过多/胃溃疡",
+      "dog_dosage_min": 0.5,
+      "dog_dosage_max": 1,
+      "unit": "mg/kg",
+      "cat_dosage_min": 0.7,
+      "cat_dosage_max": 1,
+      "cat_unit": "mg/kg",
+      "frequency": "每日1-2次",
+      "duration": "2-4周",
+      "warnings": [
+        "长期使用可能影响钙吸收",
+        "饭前30分钟服用"
+      ]
+    },
+    "加巴喷丁": {
+      "usage": "神经性疼痛/抗焦虑（尤其猫就诊前镇静）",
+      "dog_dosage_min": 10,
+      "dog_dosage_max": 30,
+      "unit": "mg/kg",
+      "cat_dosage_min": 10,
+      "cat_dosage_max": 20,
+      "cat_unit": "mg/kg",
+      "frequency": "每8-12小时一次",
+      "duration": "按需",
+      "warnings": [
+        "肾功能不全需大幅减量",
+        "可能导致嗜睡/共济失调"
+      ]
+    },
+    "氯雷他定": {
+      "usage": "抗组胺药，过敏性皮肤病",
+      "dog_dosage_min": 0.2,
+      "dog_dosage_max": 0.5,
+      "unit": "mg/kg",
+      "cat_dosage_min": 0.2,
+      "cat_dosage_max": 0.5,
+      "cat_unit": "mg/kg",
+      "frequency": "每日一次",
+      "duration": "按需",
+      "warnings": [
+        "避免含伪麻黄碱的复方制剂",
+        "肾功能不全者慎用"
+      ]
+    },
+    "美洛昔康": {
+      "usage": "非甾体抗炎药，关节炎/术后镇痛",
+      "dog_dosage_min": 0.1,
+      "dog_dosage_max": 0.2,
+      "unit": "mg/kg",
+      "cat_dosage_min": 0.05,
+      "cat_dosage_max": 0.1,
+      "cat_unit": "mg/kg",
+      "frequency": "每日一次",
+      "duration": "犬不超10天，猫遵医嘱",
+      "warnings": [
+        "禁止与其他NSAID联用",
+        "脱水犬猫禁用",
+        "猫慎用：极易过量"
+      ]
+    },
+    "曲马多": {
+      "usage": "中枢性镇痛药，中重度疼痛",
+      "dog_dosage_min": 2,
+      "dog_dosage_max": 5,
+      "unit": "mg/kg",
+      "cat_dosage_min": 1,
+      "cat_dosage_max": 2,
+      "cat_unit": "mg/kg",
+      "frequency": "每8-12小时一次",
+      "duration": "按需",
+      "warnings": [
+        "与SSRI类药物联用可能引发5-HT综合征",
+        "癫痫犬慎用"
+      ]
+    },
+    "赛拉嗪": {
+      "usage": "镇静/催吐用",
+      "dog_dosage_min": 0.05,
+      "dog_dosage_max": 0.1,
+      "unit": "mg/kg",
+      "cat_dosage_min": 0.05,
+      "cat_dosage_max": 0.1,
+      "cat_unit": "mg/kg",
+      "frequency": "单次给药",
+      "duration": "单次",
+      "warnings": [
+        "仅限兽医指导下使用",
+        "心脏疾病犬猫禁用",
+        "禁用于孕期动物"
+      ]
+    },
+    "氯苯那敏": {
+      "usage": "第一代抗组胺药，过敏/瘙痒",
+      "dog_dosage_min": 0.2,
+      "dog_dosage_max": 0.4,
+      "unit": "mg/kg",
+      "cat_dosage_min": 2,
+      "cat_dosage_max": 4,
+      "cat_unit": "mg/只",
+      "frequency": "每8-12小时一次",
+      "duration": "按需",
+      "warnings": [
+        "可能引起嗜睡",
+        "青光眼犬猫慎用"
+      ]
+    }
+  },
+  "breed_contraindications": {
+    "柯利犬": [
+      "伊维菌素",
+      "多杀霉素",
+      "洛哌丁胺"
+    ],
+    "喜乐蒂": [
+      "伊维菌素",
+      "洛哌丁胺"
+    ],
+    "边牧": [
+      "伊维菌素",
+      "洛哌丁胺"
+    ],
+    "澳牧": [
+      "伊维菌素",
+      "洛哌丁胺"
+    ],
+    "古牧": [
+      "伊维菌素"
+    ]
+  },
+  "species_contraindications": {
+    "猫": [
+      "布洛芬",
+      "氯菊酯",
+      "苯海拉明",
+      "茶树油",
+      "萘普生",
+      "对乙酰氨基酚",
+      "5-氟尿嘧啶",
+      "阿司匹林"
+    ],
+    "狗": [
+      "布洛芬",
+      "对乙酰氨基酚",
+      "萘普生"
+    ]
+  }
+}

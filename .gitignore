@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.env
+*.pyc
+logs/
+uploads/
+checkpoints.db
+.claude/
+.idea/
+.vscode/
+node_modules/
+frontend/dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
