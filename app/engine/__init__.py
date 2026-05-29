@@ -1,1 +1,4 @@
 """宠物营养引擎:纯 Python、零 LLM、可独立单测。"""
+from app.engine.evaluate import assess
+
+__all__ = ["assess"]
