@@ -1,0 +1,18 @@
+{
+  "source": "USDA FoodData Central (SR Legacy / Foundation Foods)",
+  "version": "FDC 2019-04 release subset",
+  "review_date": "2026-05-29",
+  "notes": "每 100g 可食部;taurine 为文献近似值(USDA 不单列牛磺酸)。Demo 精选子集。",
+  "data": {
+    "chicken_breast_cooked": {"fdc_id": "171077", "name_zh": "鸡胸肉(熟)", "kcal": 165, "protein_g": 31.0, "fat_g": 3.6, "carb_g": 0.0, "calcium_mg": 15, "phosphorus_mg": 228, "taurine_mg": 18, "sodium_mg": 74, "fiber_g": 0.0},
+    "chicken_thigh_cooked": {"fdc_id": "187884", "name_zh": "鸡腿肉(熟)", "kcal": 209, "protein_g": 26.0, "fat_g": 10.9, "carb_g": 0.0, "calcium_mg": 12, "phosphorus_mg": 200, "taurine_mg": 30, "sodium_mg": 88, "fiber_g": 0.0},
+    "beef_lean_cooked": {"fdc_id": "174032", "name_zh": "瘦牛肉(熟)", "kcal": 217, "protein_g": 26.1, "fat_g": 11.8, "carb_g": 0.0, "calcium_mg": 18, "phosphorus_mg": 201, "taurine_mg": 38, "sodium_mg": 66, "fiber_g": 0.0},
+    "salmon_cooked": {"fdc_id": "175168", "name_zh": "三文鱼(熟)", "kcal": 206, "protein_g": 22.1, "fat_g": 12.4, "carb_g": 0.0, "calcium_mg": 15, "phosphorus_mg": 252, "taurine_mg": 130, "sodium_mg": 61, "fiber_g": 0.0},
+    "chicken_liver_cooked": {"fdc_id": "171061", "name_zh": "鸡肝(熟)", "kcal": 172, "protein_g": 25.9, "fat_g": 6.5, "carb_g": 0.9, "calcium_mg": 11, "phosphorus_mg": 405, "taurine_mg": 110, "sodium_mg": 80, "fiber_g": 0.0},
+    "beef_liver_cooked": {"fdc_id": "169451", "name_zh": "牛肝(熟)", "kcal": 175, "protein_g": 26.5, "fat_g": 4.8, "carb_g": 5.1, "calcium_mg": 6, "phosphorus_mg": 497, "taurine_mg": 68, "sodium_mg": 83, "fiber_g": 0.0},
+    "egg_whole_cooked": {"fdc_id": "173424", "name_zh": "全蛋(熟)", "kcal": 155, "protein_g": 12.6, "fat_g": 10.6, "carb_g": 1.1, "calcium_mg": 56, "phosphorus_mg": 198, "taurine_mg": 0, "sodium_mg": 124, "fiber_g": 0.0},
+    "rice_white_cooked": {"fdc_id": "169756", "name_zh": "白米饭(熟)", "kcal": 130, "protein_g": 2.7, "fat_g": 0.3, "carb_g": 28.2, "calcium_mg": 10, "phosphorus_mg": 43, "taurine_mg": 0, "sodium_mg": 1, "fiber_g": 0.4},
+    "pumpkin_cooked": {"fdc_id": "170491", "name_zh": "南瓜(熟)", "kcal": 20, "protein_g": 0.7, "fat_g": 0.1, "carb_g": 4.9, "calcium_mg": 15, "phosphorus_mg": 30, "taurine_mg": 0, "sodium_mg": 1, "fiber_g": 1.1},
+    "carrot_raw": {"fdc_id": "170393", "name_zh": "胡萝卜(生)", "kcal": 41, "protein_g": 0.9, "fat_g": 0.2, "carb_g": 9.6, "calcium_mg": 33, "phosphorus_mg": 35, "taurine_mg": 0, "sodium_mg": 69, "fiber_g": 2.8}
+  }
+}
