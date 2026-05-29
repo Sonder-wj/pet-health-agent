@@ -1,4 +1,4 @@
-"""Pet Health Agent — Chat API (SSE)"""
+"""Pet Nutrition Agent — Chat API (SSE)。"""
 import json
 import traceback
 from datetime import datetime
@@ -21,53 +21,33 @@ logger = get_logger(service="api")
 
 
 def _build_initial_state(
-    query: str, image_path: str | None, pet_profile: dict | None
+    query: str, label_image_path: str | None, pet_profile: dict | None
 ) -> dict:
-    content_parts = []
-    if image_path:
-        ext = Path(image_path).suffix.lower()
-        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
-        mime_type = mime_map.get(ext, "image/jpeg")
-        import base64
-        with open(image_path, "rb") as f:
-            img_b64 = base64.b64encode(f.read()).decode()
-        content_parts.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:{mime_type};base64,{img_b64}"},
-        })
-        content_parts.append({"type": "text", "text": query})
-    else:
-        content_parts.append({"type": "text", "text": query})
+    """构造初始 AgentState。
 
-    user_message = {
-        "role": "user",
-        "content": content_parts if len(content_parts) > 1 else query,
-    }
-
+    图片不嵌入消息内容 — 让 LLM 走 extract_label_nutrition 工具读盘,
+    避免它自己"看"图后给出未经引擎核算的结论。
+    """
+    user_message = {"role": "user", "content": query}
     return {
         "messages": [user_message],
         "pet_profile": pet_profile or {},
-        "collected_symptoms": [],
+        "diet_input": None,
+        "label_image_path": label_image_path,
+        "assessment": None,
         "tool_results": {},
-        "triage_level": None,
-        "pending_question": None,
-        "awaiting_user_input": False,
-        "visit_summary": None,
-        "image_path": image_path,
         "iteration_count": 0,
         "final_response": None,
-        "already_triaged": False,
-        "symptom_history": [],
+        "report_md": None,
     }
 
 
 async def _save_chat_history(
     thread_id: str, user_query: str, assistant_content: str, title: str = "", user_id: int = 1
 ) -> None:
-    """持久化对话记录到 MySQL。失败时静默跳过，不影响主流程。"""
+    """持久化对话到 MySQL。失败静默,不阻塞主流程。"""
     try:
         async with AsyncSessionLocal() as session:
-            # 查找或创建对话
             result = await session.execute(
                 select(Conversation).where(Conversation.thread_id == thread_id)
             )
@@ -82,41 +62,51 @@ async def _save_chat_history(
                 session.add(conv)
                 await session.flush()
 
-            # 保存用户消息
-            user_msg = Message(
-                conversation_id=conv.id,
-                sender="user",
-                content=user_query[:5000],
-                message_type="text",
-            )
-            session.add(user_msg)
-
-            # 保存助手回复
+            session.add(Message(
+                conversation_id=conv.id, sender="user",
+                content=user_query[:5000], message_type="text",
+            ))
             if assistant_content:
-                assistant_msg = Message(
-                    conversation_id=conv.id,
-                    sender="assistant",
-                    content=assistant_content[:5000],
-                    message_type="text",
-                )
-                session.add(assistant_msg)
-
+                session.add(Message(
+                    conversation_id=conv.id, sender="assistant",
+                    content=assistant_content[:5000], message_type="text",
+                ))
             await session.commit()
     except Exception:
         logger.warning(f"Failed to persist chat history: {traceback.format_exc(limit=1)}")
 
 
-async def _stream_agent_response(
-    initial_state: dict, thread_config: dict
-):
-    """核心流式逻辑：通过 astream_events 逐 token 推送，并发送 tool_call/tool_result 事件。"""
+def _summarize_tool_output(tool_name: str, output) -> str:
+    """提取工具输出关键摘要,避免向客户端推送过长内容。"""
+    if not output:
+        return ""
+    if isinstance(output, str):
+        return output[:300] + ("..." if len(output) > 300 else "")
+    if isinstance(output, dict):
+        # 新工具的关键字段优先
+        if tool_name == "assess_nutrition" and output.get("status") == "ok":
+            n_findings = len(output.get("findings", []))
+            energy = output.get("energy", {})
+            balance = energy.get("balance_pct")
+            return f"评估完成: {n_findings} 项 findings, 能量偏差 {balance}%"
+        if tool_name == "lookup_ingredient":
+            return f"找到 {output.get('total', 0)} 项匹配 ({output.get('status', '')})"
+        if tool_name == "compute_energy_requirement" and output.get("status") == "ok":
+            return f"RER {output.get('rer')} / MER {output.get('mer')} kcal/day ({output.get('life_stage')})"
+        if tool_name == "extract_label_nutrition" and output.get("status") == "ok":
+            return f"标签解析成功: {output.get('label')}"
+        return output.get("message") or output.get("response") or str(output)[:300]
+    return str(output)[:300]
+
+
+async def _stream_agent_response(initial_state: dict, thread_config: dict):
+    """核心流:转发 LLM token、tool_call/tool_result;末尾发 assessment/report。"""
     try:
         async for event in agent_graph.astream_events(  # type: ignore[attr-defined]
             initial_state, thread_config, version="v2"
         ):
             kind = event.get("event", "")
 
-            # LLM 逐 token 输出
             if kind == "on_chat_model_stream":
                 chunk = event.get("data", {}).get("chunk")
                 if chunk and hasattr(chunk, "content") and chunk.content:
@@ -124,12 +114,10 @@ async def _stream_agent_response(
                     if isinstance(text, str):
                         yield f"data: {json.dumps({'type': 'token', 'content': text}, ensure_ascii=False)}\n\n"
 
-            # 工具被调用
             elif kind == "on_tool_start":
                 tool_name = event.get("name", "unknown")
                 tool_input = event.get("data", {}).get("input", {})
-                # 序列化工具参数（过滤不可序列化的对象）
-                safe_input = {}
+                safe_input: dict = {}
                 for k, v in tool_input.items():
                     try:
                         json.dumps(v)
@@ -138,50 +126,41 @@ async def _stream_agent_response(
                         safe_input[k] = str(v)
                 yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'args': safe_input}, ensure_ascii=False)}\n\n"
 
-            # 工具返回结果
             elif kind == "on_tool_end":
                 tool_name = event.get("name", "unknown")
                 output = event.get("data", {}).get("output")
                 summary = _summarize_tool_output(tool_name, output)
                 yield f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'summary': summary}, ensure_ascii=False)}\n\n"
 
-        # 流结束后获取最终状态
+        # 流结束后:从最终 state 发结构化终态事件
         final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
-        state_values = final_state.values if final_state else {}
+        sv = final_state.values if final_state else {}
 
-        if state_values.get("triage_level"):
-            yield f"data: {json.dumps({'type': 'triage', 'level': state_values['triage_level']}, ensure_ascii=False)}\n\n"
+        if sv.get("assessment"):
+            yield f"data: {json.dumps({'type': 'assessment', 'data': sv['assessment']}, ensure_ascii=False)}\n\n"
 
-        if state_values.get("awaiting_user_input") and state_values.get("pending_question"):
-            yield f"data: {json.dumps({'type': 'question', 'message': state_values['pending_question']}, ensure_ascii=False)}\n\n"
-        elif state_values.get("visit_summary"):
-            yield f"data: {json.dumps({'type': 'visit_summary', 'message': state_values['visit_summary']}, ensure_ascii=False)}\n\n"
+        if sv.get("report_md"):
+            yield f"data: {json.dumps({'type': 'report', 'markdown': sv['report_md']}, ensure_ascii=False)}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     except Exception:
         logger.error(f"Agent stream error: {traceback.format_exc()}")
-        yield f"data: {json.dumps({'type': 'error', 'message': '系统异常，请稍后再试'}, ensure_ascii=False)}\n\n"
+        yield f"data: {json.dumps({'type': 'error', 'message': '系统异常,请稍后再试'}, ensure_ascii=False)}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
 
-def _summarize_tool_output(tool_name: str, output) -> str:
-    """提取工具输出的关键摘要，避免向客户端推送过长内容。"""
-    if not output:
-        return ""
-
-    if isinstance(output, str):
-        return output[:300] + ("..." if len(output) > 300 else "")
-    if isinstance(output, dict):
-        return output.get("question") or \
-               output.get("findings") or \
-               output.get("summary_markdown") or \
-               output.get("message") or \
-               output.get("response") or \
-               str(output)[:300]
-    if isinstance(output, list):
-        return str(output[:5])
-    return str(output)[:300]
+def _extract_assistant_content(state_values: dict) -> str:
+    """从最终 state 提取要落库的助手回复(优先 report_md / final_response)。"""
+    if state_values.get("report_md"):
+        return state_values["report_md"][:5000]
+    if state_values.get("final_response"):
+        return state_values["final_response"][:5000]
+    for m in reversed(state_values.get("messages", [])):
+        content = getattr(m, "content", "") if hasattr(m, "content") else str(m)
+        if content and not (hasattr(m, "tool_calls") and m.tool_calls):
+            return content[:5000]
+    return ""
 
 
 @router.post("/chat")
@@ -191,52 +170,37 @@ async def chat(
     image: Optional[UploadFile] = File(None),
     current_user: User | None = Depends(get_current_user),
 ):
-    image_path = None
+    label_image_path: str | None = None
     if image and image.filename:
         img_dir = Path("uploads/images")
         img_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         safe_name = f"{ts}_{image.filename}"
-        image_path = img_dir / safe_name
+        saved_path = img_dir / safe_name
         content = await image.read()
-        with open(image_path, "wb") as f:
+        with open(saved_path, "wb") as f:
             f.write(content)
-        logger.info(f"Image saved: {image_path}")
+        label_image_path = str(saved_path)
+        logger.info(f"Label image saved: {label_image_path}")
 
     thread_id = session_id or f"session_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
     thread_config = {"configurable": {"thread_id": thread_id}}
-    pet_profile = {}
+
+    pet_profile: dict = {}
     if current_user and current_user.id:
-        pet_profile = {"name": current_user.username}
-    initial_state = _build_initial_state(
-        query, str(image_path) if image_path else None, pet_profile
-    )
+        pet_profile = {"name": current_user.username}  # 仅作显示种子;真档案由 Agent 收集
+
+    initial_state = _build_initial_state(query, label_image_path, pet_profile)
 
     async def event_stream():
-        yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠正在思考...'})}\n\n"
+        yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠营养师正在评估...'})}\n\n"
 
         async for chunk in _stream_agent_response(initial_state, thread_config):
             yield chunk
 
-        # 持久化：收集助手回复内容并保存
-        # 从最终状态提取助手内容
-        assistant_content = ""
         final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
-        if final_state and final_state.values:
-            sv = final_state.values
-            if sv.get("visit_summary"):
-                assistant_content = sv["visit_summary"]
-            elif sv.get("pending_question"):
-                assistant_content = f"[追问] {sv['pending_question']}"
-            elif sv.get("final_response"):
-                assistant_content = sv["final_response"]
-            else:
-                msgs = sv.get("messages", [])
-                for m in reversed(msgs):
-                    content = getattr(m, "content", "") if hasattr(m, "content") else str(m)
-                    if content and not (hasattr(m, "tool_calls") and m.tool_calls):
-                        assistant_content = content[:5000]
-                        break
+        sv = final_state.values if final_state else {}
+        assistant_content = _extract_assistant_content(sv)
 
         await _save_chat_history(
             thread_id=thread_id,
@@ -258,38 +222,22 @@ async def chat_resume(
     query: str = Form(...),
     current_user: User | None = Depends(get_current_user),
 ):
+    """续接对话 — 不再有医疗向 'already_triaged' 短路,标准 ReAct 继续。"""
     thread_config = {"configurable": {"thread_id": session_id}}
 
     async def event_stream():
-        yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠正在思考...'})}\n\n"
+        yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠营养师正在评估...'})}\n\n"
 
         resume_state = {
             "messages": [{"role": "user", "content": query}],
-            "awaiting_user_input": False,
-            "already_triaged": True,  # 追问回复不重新分诊
         }
 
         async for chunk in _stream_agent_response(resume_state, thread_config):
             yield chunk
 
-        # 持久化用户回答
-        assistant_content = ""
         final_state = agent_graph.get_state(thread_config)  # type: ignore[attr-defined]
-        if final_state and final_state.values:
-            sv = final_state.values
-            if sv.get("visit_summary"):
-                assistant_content = sv["visit_summary"]
-            elif sv.get("pending_question"):
-                assistant_content = f"[追问] {sv['pending_question']}"
-            elif sv.get("final_response"):
-                assistant_content = sv["final_response"]
-            else:
-                msgs = sv.get("messages", [])
-                for m in reversed(msgs):
-                    content = getattr(m, "content", "") if hasattr(m, "content") else str(m)
-                    if content and not (hasattr(m, "tool_calls") and m.tool_calls):
-                        assistant_content = content[:5000]
-                        break
+        sv = final_state.values if final_state else {}
+        assistant_content = _extract_assistant_content(sv)
 
         await _save_chat_history(
             thread_id=session_id,
@@ -307,7 +255,6 @@ async def list_conversations(
     limit: int = 20,
     current_user: User | None = Depends(get_current_user),
 ):
-    """获取历史对话列表"""
     user_id = current_user.id if current_user else 1
     try:
         async with AsyncSessionLocal() as session:
@@ -338,7 +285,6 @@ async def list_conversations(
 
 @router.get("/history/{thread_id}")
 async def get_conversation_messages(thread_id: str):
-    """获取指定对话的消息记录"""
     try:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
