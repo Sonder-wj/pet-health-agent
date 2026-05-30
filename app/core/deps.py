@@ -1,5 +1,5 @@
 """FastAPI 依赖注入：获取当前用户"""
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
@@ -21,7 +21,7 @@ async def get_db():
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> User | None:
-    """从请求头提取 token，返回用户对象。无 token 时返回 None（允许匿名使用）。"""
+    """可选认证：返回用户对象或 None（用于既允许匿名又允许登录的端点，如健康检查等）。"""
     if credentials is None:
         return None
     user_id = decode_token(credentials.credentials)
@@ -30,3 +30,20 @@ async def get_current_user(
     async with AsyncSessionLocal() as session:
         r = await session.execute(select(User).where(User.id == user_id))
         return r.scalar_one_or_none()
+
+
+async def require_user(
+    user: User | None = Depends(get_current_user),
+) -> User:
+    """强制认证：未登录 / token 无效直接 401。
+
+    所有涉及个人数据(聊天、历史)的端点必须用这个,不能用 get_current_user。
+    否则匿名请求会 fallback 到某个默认 user_id,导致多账号数据混淆。
+    """
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="请先登录",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user

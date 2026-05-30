@@ -31,6 +31,8 @@ class PetProfile(TypedDict, total=False):
 class AgentState(TypedDict, total=False):
     messages: Annotated[list, add_messages]
     pet_profile: PetProfile
+    user_pets: list[dict]           # 当前用户已保存的所有宠物档案(API 在 chat 启动时注入)
+    user_memories: list[dict]       # 当前用户的长期记忆(跨 thread,API 注入)
     diet_input: dict | None         # {items?: [...], label?: {...}, amount_g?, kcal?, nutrients?, ingredient_names?}
     label_image_path: str | None
     assessment: dict | None         # engine.NutritionAssessment 序列化结果

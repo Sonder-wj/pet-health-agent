@@ -33,21 +33,22 @@
             :is-streaming="Boolean(msg._placeholder && chatStore.isStreaming)"
           />
 
+          <!-- 评估卡 / 报告嵌入到对应的 assistant 消息后面,成为对话历史的一部分 -->
+          <AssessmentCard
+            v-if="msg.assessment"
+            :assessment="msg.assessment"
+          />
+
+          <MarkdownReport
+            v-if="msg.report"
+            :markdown="msg.report"
+          />
+
           <AgentTracePanel
             v-if="shouldRenderTraceAfter(index, msg)"
             :steps="chatStore.agentTrace"
           />
         </template>
-
-        <AssessmentCard
-          v-if="chatStore.assessment"
-          :assessment="chatStore.assessment"
-        />
-
-        <MarkdownReport
-          v-if="chatStore.reportMd"
-          :markdown="chatStore.reportMd"
-        />
 
         <div v-if="chatStore.error" class="error-banner">
           <span>{{ chatStore.error }}</span>
@@ -115,8 +116,6 @@ function shouldRenderTraceAfter(index, msg) {
 watch(() => chatStore.streamingText, scrollToBottom)
 watch(() => chatStore.messages.length, scrollToBottom)
 watch(() => chatStore.agentTrace.length, scrollToBottom)
-watch(() => chatStore.assessment, scrollToBottom)
-watch(() => chatStore.reportMd, scrollToBottom)
 
 async function handleSend({ text, imageFile }) {
   await chatStore.sendMessage(text, imageFile)

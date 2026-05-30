@@ -14,8 +14,6 @@ export const useChatStore = defineStore('chat', () => {
 
   // 营养 Agent 状态
   const petProfile = ref({})       // 后端 state.pet_profile;MVP 仅从对话中累积,前端不直接编辑
-  const assessment = ref(null)     // { energy, nutrients, findings } — 由 'assessment' 事件设置
-  const reportMd = ref('')         // 最终 Markdown 报告 — 由 'report' 事件设置
 
   const error = ref(null)
   const thinking = ref(false)
@@ -23,6 +21,10 @@ export const useChatStore = defineStore('chat', () => {
   let finalAnswerFallback = ''
   let tokenStarted = false
   let traceId = 0
+  // 当前轮次累积的 assessment / report;turn 结束时附加到 assistant 消息上,
+  // 这样它们成为消息历史的一部分,不会"漂浮"在所有消息底下。
+  let currentAssessment = null
+  let currentReportMd = ''
 
   const currentTitle = computed(() => {
     const conversation = conversations.value.find(item => item.thread_id === activeThreadId.value)
@@ -63,13 +65,22 @@ export const useChatStore = defineStore('chat', () => {
     toolCalls.length = 0
     agentTrace.length = 0
     petProfile.value = {}
-    assessment.value = null
-    reportMd.value = ''
     error.value = null
     thinking.value = false
     finalAnswerFallback = ''
     tokenStarted = false
     traceId = 0
+    currentAssessment = null
+    currentReportMd = ''
+  }
+
+  /**
+   * 切账号 / 登出时调用 — 清掉所有"个人数据",
+   * 包括侧栏会话列表,防止 A 的记录漂到 B 的页面。
+   */
+  function clearAccountData() {
+    conversations.value = []
+    resetSession()
   }
 
   async function sendMessage(query, imageFile) {
@@ -81,9 +92,12 @@ export const useChatStore = defineStore('chat', () => {
     streamingText.value = ''
     toolCalls.length = 0
     agentTrace.length = 0
-    // 不清 petProfile/assessment/reportMd — 多轮对话保留累积上下文
+    // 不清 petProfile — 跨轮累积
     finalAnswerFallback = ''
     tokenStarted = false
+    // 新一轮的 assessment/report 从空开始;旧的已经附在上轮的 assistant 消息里了
+    currentAssessment = null
+    currentReportMd = ''
 
     messages.push({ sender: 'user', content: query, type: 'text' })
     messages.push({ sender: 'assistant', content: '', type: 'streaming', _placeholder: true })
@@ -93,7 +107,7 @@ export const useChatStore = defineStore('chat', () => {
 
     try {
       const res = hasSession
-        ? await streamResume({ sessionId: activeThreadId.value, query, signal: abortController.signal })
+        ? await streamResume({ sessionId: activeThreadId.value, query, imageFile, signal: abortController.signal })
         : await streamChat({ query, sessionId: null, imageFile, signal: abortController.signal })
 
       if (!activeThreadId.value) {
@@ -152,12 +166,20 @@ export const useChatStore = defineStore('chat', () => {
           sender: 'assistant',
           content: assistantContent,
           type: 'text',
+          assessment: currentAssessment,  // 嵌入到这条消息,而不是全局漂浮
+          report: currentReportMd || null,
         })
       } else {
         messages.splice(placeholderIdx, 1)
       }
     } else if (assistantContent) {
-      messages.push({ sender: 'assistant', content: assistantContent, type: 'text' })
+      messages.push({
+        sender: 'assistant',
+        content: assistantContent,
+        type: 'text',
+        assessment: currentAssessment,
+        report: currentReportMd || null,
+      })
     }
   }
 
@@ -243,26 +265,26 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       case 'assessment':
-        assessment.value = event.data || null
+        currentAssessment = event.data || null
         appendTraceStep({
           kind: 'tool',
           status: 'done',
           title: '已生成营养评估',
           summary: '能量平衡、营养素密度、关键发现已经准备好。',
-          resultPreview: assessment.value
-            ? `${assessment.value.findings?.length || 0} 项 findings`
+          resultPreview: currentAssessment
+            ? `${currentAssessment.findings?.length || 0} 项 findings`
             : '',
         })
         break
 
       case 'report':
-        reportMd.value = event.markdown || ''
+        currentReportMd = event.markdown || ''
         appendTraceStep({
           kind: 'tool',
           status: 'done',
           title: '已渲染最终报告',
-          summary: 'Markdown 报告已发送到右侧展示区。',
-          resultPreview: summarizeText(reportMd.value, 180),
+          summary: 'Markdown 报告将随这条消息保留在对话历史中。',
+          resultPreview: summarizeText(currentReportMd, 180),
         })
         break
 
@@ -337,14 +359,13 @@ export const useChatStore = defineStore('chat', () => {
     toolCalls,
     agentTrace,
     petProfile,
-    assessment,
-    reportMd,
     error,
     thinking,
     currentTitle,
     loadHistory,
     loadThread,
     resetSession,
+    clearAccountData,
     sendMessage,
   }
 })

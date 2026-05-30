@@ -12,18 +12,19 @@ const routes = [
     path: '/',
     name: 'Chat',
     component: () => import('../views/Chat.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/chat/:threadId',
     name: 'ChatThread',
     component: () => import('../views/Chat.vue'),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
 ]
 
+// dev 走 '/' 根路径,build 走 '/static/'(和 vite.config.js base 一致)
 const router = createRouter({
-  history: createWebHashHistory('/static/'),
+  history: createWebHashHistory(import.meta.env.PROD ? '/static/' : '/'),
   routes,
 })
 

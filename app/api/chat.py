@@ -10,17 +10,40 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, select
 
 from app.core.database import AsyncSessionLocal
-from app.core.deps import get_current_user
+from app.core.deps import require_user
 from app.core.logger import get_logger
-from app.models import Conversation, Message
+from app.models import Conversation, Message, Pet, UserMemory
 from app.models.user import User
+
+# 最多注入到 system prompt 的长期记忆条数(避免上下文爆炸)
+MEMORY_INJECT_LIMIT = 50
 
 router = APIRouter()
 logger = get_logger(service="api")
 
 
+async def _save_uploaded_image(image: UploadFile | None) -> str | None:
+    """保存用户上传的标签图片到 uploads/images/,返回相对路径(None 表示无图)。"""
+    if not image or not image.filename:
+        return None
+    img_dir = Path("uploads/images")
+    img_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    safe_name = f"{ts}_{image.filename}"
+    saved_path = img_dir / safe_name
+    content = await image.read()
+    with open(saved_path, "wb") as f:
+        f.write(content)
+    logger.info(f"Label image saved: {saved_path}")
+    return str(saved_path)
+
+
 def _build_initial_state(
-    query: str, label_image_path: str | None, pet_profile: dict | None
+    query: str,
+    label_image_path: str | None,
+    pet_profile: dict | None,
+    user_pets: list[dict] | None = None,
+    user_memories: list[dict] | None = None,
 ) -> dict:
     """构造初始 AgentState。
 
@@ -31,6 +54,8 @@ def _build_initial_state(
     return {
         "messages": [user_message],
         "pet_profile": pet_profile or {},
+        "user_pets": user_pets or [],
+        "user_memories": user_memories or [],
         "diet_input": None,
         "label_image_path": label_image_path,
         "assessment": None,
@@ -41,8 +66,37 @@ def _build_initial_state(
     }
 
 
+async def _fetch_user_pets(user_id: int) -> list[dict]:
+    """读取该用户已保存的所有宠物档案,注入到 chat 起始 state。失败返回空列表。"""
+    try:
+        async with AsyncSessionLocal() as session:
+            r = await session.execute(
+                select(Pet).where(Pet.user_id == user_id).order_by(Pet.created_at)
+            )
+            return [p.to_dict() for p in r.scalars().all()]
+    except Exception as e:
+        logger.warning(f"_fetch_user_pets failed for user_id={user_id}: {e}")
+        return []
+
+
+async def _fetch_user_memories(user_id: int, limit: int = MEMORY_INJECT_LIMIT) -> list[dict]:
+    """读取该用户的长期记忆,按时间倒序取最新 N 条。未来可换语义检索。"""
+    try:
+        async with AsyncSessionLocal() as session:
+            r = await session.execute(
+                select(UserMemory)
+                .where(UserMemory.user_id == user_id)
+                .order_by(UserMemory.created_at.desc())
+                .limit(limit)
+            )
+            return [m.to_dict() for m in r.scalars().all()]
+    except Exception as e:
+        logger.warning(f"_fetch_user_memories failed for user_id={user_id}: {e}")
+        return []
+
+
 async def _save_chat_history(
-    thread_id: str, user_query: str, assistant_content: str, title: str = "", user_id: int = 1
+    thread_id: str, user_query: str, assistant_content: str, user_id: int, title: str = "",
 ) -> None:
     """持久化对话到 MySQL。失败静默,不阻塞主流程。"""
     try:
@@ -166,33 +220,30 @@ def _extract_assistant_content(state_values: dict) -> str:
 @router.post("/chat")
 async def chat(
     request: Request,
-    query: str = Form(...),
+    query: Optional[str] = Form(None),
     session_id: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_user),
 ):
     agent_graph = request.app.state.agent_graph
-    label_image_path: str | None = None
-    if image and image.filename:
-        img_dir = Path("uploads/images")
-        img_dir.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        safe_name = f"{ts}_{image.filename}"
-        saved_path = img_dir / safe_name
-        content = await image.read()
-        with open(saved_path, "wb") as f:
-            f.write(content)
-        label_image_path = str(saved_path)
-        logger.info(f"Label image saved: {label_image_path}")
+    label_image_path = await _save_uploaded_image(image)
+
+    # 用户仅上传图片不打字时,补一段默认提示让 Agent 知道该干啥
+    # (FastAPI 把 multipart 里的空字段解析为 None,直接 Form(...) 会 422)
+    if not query or not query.strip():
+        query = "请帮我看看这张包装照的营养情况" if label_image_path else "你好"
 
     thread_id = session_id or f"session_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-    thread_config = {"configurable": {"thread_id": thread_id}}
+    # user_id 注入 configurable,save_pet_profile / list_pets 等工具通过 RunnableConfig 读取
+    thread_config = {"configurable": {"thread_id": thread_id, "user_id": current_user.id}}
 
-    pet_profile: dict = {}
-    if current_user and current_user.id:
-        pet_profile = {"name": current_user.username}  # 仅作显示种子;真档案由 Agent 收集
-
-    initial_state = _build_initial_state(query, label_image_path, pet_profile)
+    # 跨 thread 持久档案 + 长期记忆:Agent 启动时即拥有完整用户上下文
+    user_pets = await _fetch_user_pets(current_user.id)
+    user_memories = await _fetch_user_memories(current_user.id)
+    initial_state = _build_initial_state(
+        query, label_image_path, pet_profile=None,
+        user_pets=user_pets, user_memories=user_memories,
+    )
 
     async def event_stream():
         yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠营养师正在评估...'})}\n\n"
@@ -209,7 +260,7 @@ async def chat(
             user_query=query,
             assistant_content=assistant_content,
             title=query[:100],
-            user_id=current_user.id if current_user else 1,
+            user_id=current_user.id,
         )
 
     response = StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -222,19 +273,48 @@ async def chat(
 async def chat_resume(
     request: Request,
     session_id: str,
-    query: str = Form(...),
-    current_user: User | None = Depends(get_current_user),
+    query: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    current_user: User = Depends(require_user),
 ):
-    """续接对话 — 不再有医疗向 'already_triaged' 短路,标准 ReAct 继续。"""
+    """续接对话 — 不再有医疗向 'already_triaged' 短路,标准 ReAct 继续。
+
+    支持多模态:续接时也可以上传商品粮包装照,Agent 会调 extract_label_nutrition。
+    """
     agent_graph = request.app.state.agent_graph
-    thread_config = {"configurable": {"thread_id": session_id}}
+    label_image_path = await _save_uploaded_image(image)
+    thread_config = {"configurable": {"thread_id": session_id, "user_id": current_user.id}}
+
+    # 同 chat():仅上图不打字时补默认提示
+    if not query or not query.strip():
+        query = "请帮我看看这张包装照的营养情况" if label_image_path else "继续"
+
+    # 续接也刷新档案 + 记忆 — 用户可能在另一个 thread 新建了宠物或新记忆
+    user_pets = await _fetch_user_pets(current_user.id)
+    user_memories = await _fetch_user_memories(current_user.id)
 
     async def event_stream():
         yield f"data: {json.dumps({'type': 'thinking', 'msg': '小宠营养师正在评估...'})}\n\n"
 
-        resume_state = {
+        # 续接 state:label_image_path 仅在本轮上传时设置,
+        # checkpointer 会把它合并进已存在的 thread state(messages 追加,其他字段覆盖)。
+        #
+        # 必须重置的完成信号字段:
+        # - iteration_count: 累计后撞 MAX_ITERATIONS 会强制走 _force_final_answer
+        # - final_response / report_md: should_continue 和 after_tools 第一行就检查它们,
+        #   不清空的话 Agent 还没来得及说话,图就立即 end → 用户看到"不回话"
+        #
+        # 注:assessment 保留 — 多轮里用户可能问"为什么钙不够",需要前一轮的评估上下文。
+        resume_state: dict = {
             "messages": [{"role": "user", "content": query}],
+            "iteration_count": 0,
+            "final_response": None,
+            "report_md": None,
+            "user_pets": user_pets,           # 每轮刷新,反映其他 thread 的最新档案
+            "user_memories": user_memories,   # 同上,记忆也跨 thread 同步
         }
+        if label_image_path:
+            resume_state["label_image_path"] = label_image_path
 
         async for chunk in _stream_agent_response(agent_graph, resume_state, thread_config):
             yield chunk
@@ -248,7 +328,7 @@ async def chat_resume(
             user_query=query,
             assistant_content=assistant_content,
             title="",
-            user_id=current_user.id if current_user else 1,
+            user_id=current_user.id,
         )
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -257,9 +337,9 @@ async def chat_resume(
 @router.get("/history")
 async def list_conversations(
     limit: int = 20,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_user),
 ):
-    user_id = current_user.id if current_user else 1
+    user_id = current_user.id
     try:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
@@ -288,7 +368,10 @@ async def list_conversations(
 
 
 @router.get("/history/{thread_id}")
-async def get_conversation_messages(thread_id: str):
+async def get_conversation_messages(
+    thread_id: str,
+    current_user: User = Depends(require_user),
+):
     try:
         async with AsyncSessionLocal() as session:
             result = await session.execute(
@@ -297,6 +380,10 @@ async def get_conversation_messages(thread_id: str):
             conv = result.scalar_one_or_none()
             if not conv:
                 return {"messages": [], "error": "对话不存在"}
+
+            # 防越权:别的账号的 thread_id 直接拒
+            if conv.user_id != current_user.id:
+                return {"messages": [], "error": "无权访问此对话"}
 
             msg_result = await session.execute(
                 select(Message)

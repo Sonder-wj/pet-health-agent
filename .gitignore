@@ -4,12 +4,18 @@ __pycache__/
 *.pyc
 logs/
 uploads/
-checkpoints.db
+# SQLite checkpoint(LangGraph AsyncSqliteSaver) — WAL 模式产生 .db/.db-shm/.db-wal 三件套
+*.db
+*.db-shm
+*.db-wal
 .claude/
 .idea/
 .vscode/
 node_modules/
 frontend/dist/
+# 前端构建产物 — 让 clone 仓库的人自己 `npm run build`,不入库
+static/
+*.code-workspace
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/

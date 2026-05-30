@@ -28,10 +28,11 @@ _vision_llm = None
 def _get_vision_llm():
     global _vision_llm
     if _vision_llm is None:
+        # 走独立的视觉模型配置(Qwen3-VL-Flash);与主对话(DeepSeek)解耦
         _vision_llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            base_url=settings.OPENAI_BASE_URL,
-            api_key=settings.OPENAI_API_KEY,
+            model=settings.VISION_MODEL,
+            base_url=settings.VISION_BASE_URL,
+            api_key=settings.VISION_API_KEY,
             temperature=0.1,
             model_kwargs={"response_format": {"type": "json_object"}},
         )

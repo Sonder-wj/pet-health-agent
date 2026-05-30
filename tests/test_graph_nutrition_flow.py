@@ -41,13 +41,16 @@ class TestGraphTopology:
         assert "triage" not in node_names
         assert "er_response" not in node_names
 
-    def test_registry_has_5_nutrition_tools(self):
-        assert len(ALL_TOOLS) == 5
+    def test_registry_has_8_nutrition_tools(self):
+        assert len(ALL_TOOLS) == 8
         expected = {
             "extract_label_nutrition",
             "lookup_ingredient",
             "compute_energy_requirement",
             "assess_nutrition",
+            "save_pet_profile",
+            "list_pets",
+            "remember",
             "final_answer",
         }
         assert set(TOOL_BY_NAME.keys()) == expected
